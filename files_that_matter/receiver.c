@@ -54,3 +54,39 @@ int main()
   close(listen_fd);
 
 }
+
+//Calculates the average length of time the packets were in the queue. 
+double avgWTime()
+{
+    double timeDiff;
+    int totalPacks;
+    double time;
+    double timeAvg = 0;
+    
+    timeAvg = time/totalPacks;
+    return timeAvg;
+}
+
+//Calculates the average length of the queue
+double avgQLen()
+{
+    double sizeofQ;
+    double avgLen = 0;
+    double arrivalTime;
+    double serviceTime;
+    double roe = arrivalTime/serviceTime;
+    
+    avgLength = (roe/(1 - roe));
+    return avgLen; 
+}
+
+//Calculate the probability a packet being dropped during the process
+double blockProb()
+{
+    int totalPacks;
+    int dropPacks;
+    double packProb;
+    
+    packpProb = dropPacks/totalPacks;
+    return packProb;
+}
