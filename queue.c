@@ -6,3 +6,14 @@
 *  the recieving server. They must also determine the queue length of this queue
 *  at the time of sending the packet, and add that information to the sent
 *  packet. They must then transmit the packets to the server. */
+
+
+struct Element {
+  char current_element = [25];
+  Element next_element;
+};
+
+struct Queue {
+  int queue_len;
+  queue_element get_queue;
+};
