@@ -18,7 +18,7 @@ int main()
   char str[25];
   int listen_fd, comm_fd;
   char end_string[25];
-  for (i = 0; i < 25; i++) {
+  for (int i = 0; i < 25; i++) {
     end_string[i] = 'x';
   }
 
@@ -44,7 +44,7 @@ int main()
 
     read(comm_fd,str,25);
     if (end_string == str) {
-      printf("Final packet received\n")
+      printf("Final packet received\n");
       continue;
     }
 
