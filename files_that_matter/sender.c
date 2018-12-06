@@ -11,22 +11,30 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/queue.h>
+#include <math.h>
+#include <inttypes.h>
 
 #define PORT "10010"
 
+// IP address of server
 #define ADDRESS "131.204.2.9"
 
 /* Defines the number of packets loaded at a time. Change this to
 *  alter the arrival rate and test performance metrics */
-const int ARRIVAL_RATE = 5;
+const int ARRIVAL_RATE = 10;
 
 /* Defines the number of packets that exit each queue. Packets
 *  leave the queue after ARRIVAL_RATE number of packets have been loaded,
 *  and SERVICE_RATE number of packets is sent from each queue with each
-* send process. */
+* send process.
+* NEEDS TO BE MORE THAN DOUBLE THE ARRIVAL_RATE */
 const int SERVICE_RATE = 1;
-const int array_x = 10000;
-const int array_y = 25;
+
+/* Defines the type of queueing
+*    0: Minimum queue
+*    1: Random queue */
+const int QUEUE_METHOD = 1;
+
 
 /* The sender function will conntinuously send packets to the server
 *  from the queue. It must increment decrement the queue length, and
@@ -35,39 +43,39 @@ const int array_y = 25;
 
 void *get_in_addr(struct sockaddr *sa)
 {
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
+  if (sa->sa_family == AF_INET) {
+    return &(((struct sockaddr_in*)sa)->sin_addr);
+  }
 
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+  return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int sender(time_t *time_array) {
+int sender(char output) {
 
-	int sockfd, numbytes;
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	char s[INET6_ADDRSTRLEN];
+  int sockfd, numbytes;
+  struct addrinfo hints, *servinfo, *p;
+  int rv;
+  char s[INET6_ADDRSTRLEN];
 
-	char inbuf[25];
-	char rcvbuf[25];
+  char inbuf[25];
+  char rcvbuf[25];
 
-	int counter;
-	char firstNum[11];
-	char secondNum[11];
-	int foundOp = 0;
+  int counter;
+  char firstNum[11];
+  char secondNum[11];
+  int foundOp = 0;
 
-	char operand;
-	unsigned int firstInt, secondInt;
+  char operand;
+  unsigned int firstInt, secondInt;
 
-	unsigned int rcvFirstInt, rcvSecondInt, rcvResult;
-	char rcvOperand, flag;
+  unsigned int rcvFirstInt, rcvSecondInt, rcvResult;
+  char rcvOperand, flag;
 
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(ADDRESS, PORT, &hints, &servinfo)) != 0) {
+  if ((rv = getaddrinfo(ADDRESS, PORT, &hints, &servinfo)) != 0) {
     fprintf(stderr, "Client: getaddrinfo: %s\n", gai_strerror(rv));
     return 1;
   }
@@ -101,7 +109,7 @@ int sender(time_t *time_array) {
     freeaddrinfo(servinfo); // all done with this structure
 
     char outbuf[25];
-    outbuf[0] = 'x';
+    outbuf[0] = output;
 
     if ((numbytes = send(sockfd, outbuf, 25, 0)) == -1) {
       perror("Line 107");
@@ -111,9 +119,6 @@ int sender(time_t *time_array) {
     }
 
     printf("%s\n", outbuf);
-
-
-    return 0;
   }
 
   /* The main function will create two queues, queue_1 and queue_2.
@@ -123,27 +128,46 @@ int sender(time_t *time_array) {
   *  into the queue */
 
   int main() {
-    time_t queue_1[10000];
-    time_t queue_2[10000];
+
+    // Two queues
+    struct timespec queue_1[10000];
+    struct timespec queue_2[10000];
+
+    // Holds the length of each queue (or the number of values in them)
     int queue_1_len = 0;
     int queue_2_len = 0;
+
+    // Holds teh current position in the queue
+    int queue_1_pos = 0;
+    int queue_2_pos = 0;
+
+    // Hold the array length values for each sent packet
+    int queue_1_len_store[10000];
+    int queue_2_len_store[10000];
+
+    // Stores the delta of time_in/time_out
+    long time_diff_1[10000];
+    long time_diff_2[10000];
 
 
     /* queue_method denotes the method taken when laoding the queue:
     *	 0 = minimum queue
     *  1 = random queue */
-    int queue_method = 0;
     int rand_queue = 0;
 
     srand(time(0));
     int i = 0;
-    for (i; i < 5; i++) {
+    int packet_count;
+    while (packet_count < 10000) {
 
       int j = 0;
       for (j; j < ARRIVAL_RATE; j++) {
 
-        time_t start_time = time(NULL);
-        switch (queue_method) {
+        if (packet_count == 10000) { break;}
+
+        struct timespec start_time;
+        clock_gettime(CLOCK_REALTIME, &start_time);
+        switch (QUEUE_METHOD) {
           // Minimum queue model
           case 0:
           if (queue_1_len < queue_2_len) {
@@ -173,11 +197,56 @@ int sender(time_t *time_array) {
           }
           break;
         }
+        packet_count++;
       }
 
-      sender(queue_1);
-      sender(queue_2);
+      int k = 0;
+      struct timespec final_time;
+      // Simulate queues sending packets
+      for (k; k < SERVICE_RATE; k++) {
+        //sender('a');
+        clock_gettime(CLOCK_REALTIME, &final_time);
+        time_diff_1[queue_1_pos] = ((final_time.tv_sec) - (queue_1[queue_1_pos].tv_sec)) * 1000000000
+          + ((final_time.tv_nsec) - (queue_1[queue_1_pos].tv_nsec));
+        queue_1_len_store[queue_1_pos] = queue_1_len;
+        queue_1_pos++;
+        queue_1_len--;
+
+        //sender('a');
+        clock_gettime(CLOCK_REALTIME, &final_time);
+        time_diff_2[queue_2_pos] = ((final_time.tv_sec) - (queue_2[queue_2_pos].tv_sec)) * 1000000000
+          + ((final_time.tv_nsec) - (queue_1[queue_1_pos].tv_nsec));
+        queue_2_len_store[queue_2_pos] = queue_2_len;
+        queue_2_pos++;
+        queue_1_len--;
+      }
     }
+    //sender('x');
+
+    long sum = 0;
+    int queue_len_sum = 0;
+    for (i = 0; i < queue_1_pos; i++) {
+      sum += time_diff_1[i];
+    }
+    printf("%lu Is the queue_1 average time (in nano seconds)\n", sum / queue_1_pos);
+
+    for (i = 0; i < queue_1_pos; i++) {
+      queue_len_sum += queue_1_len_store[i];
+    }
+    printf("%d Is the average queue length for queue_1\n\n", queue_len_sum / queue_1_pos);
+
+    sum = 0;
+    for (i = 0; i < queue_2_pos; i++) {
+      sum += time_diff_2[i];
+    }
+    printf("%lu Is the queue_2 average time (in nano seconds)\n", sum / queue_2_pos);
+
+    queue_len_sum = 0;
+    for (i = 0; i < queue_2_pos; i++) {
+      queue_len_sum += queue_2_len_store[i];
+    }
+    printf("%d Is the average queue length for queue_2\n", queue_len_sum / queue_2_pos);
+
 
     return 0;
   }
