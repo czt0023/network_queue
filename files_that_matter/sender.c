@@ -21,16 +21,15 @@
 
 /* Defines the number of packets loaded at a time. Change this to
 *  alter the arrival rate and test performance metrics */
-const int ARRIVAL_RATE = 10;
+const int ARRIVAL_RATE = 30;
 
 /* Defines the number of packets that exit each queue. Packets
 *  leave the queue after ARRIVAL_RATE number of packets have been loaded,
 *  and SERVICE_RATE number of packets is sent from each queue with each
 * send process.
 * NEEDS TO BE MORE THAN DOUBLE THE ARRIVAL_RATE */
-const int SERVICE_RATE = 1;
-
-/* Defines the type of queueing
+const int SERVICE_RATE = 5;
+/* Defines the type of que10eing
 *    0: Minimum queue
 *    1: Random queue */
 const int QUEUE_METHOD = 1;
@@ -154,8 +153,9 @@ int sender(char output) {
     *	 0 = minimum queue
     *  1 = random queue */
     int rand_queue = 0;
+    int rand_queue_count = 0;
 
-    srand(time(0));
+    srand(time(NULL));
     int i = 0;
     int packet_count;
     while (packet_count < 10000) {
@@ -187,6 +187,7 @@ int sender(char output) {
           // Random queue model
           case 1:
           rand_queue = rand() % 2;
+          if (rand_queue == 0) {rand_queue_count++;}
           if (rand_queue == 0) {
             queue_1[queue_1_len + 1] = start_time;
             queue_1_len++;
@@ -218,7 +219,7 @@ int sender(char output) {
           + ((final_time.tv_nsec) - (queue_1[queue_1_pos].tv_nsec));
         queue_2_len_store[queue_2_pos] = queue_2_len;
         queue_2_pos++;
-        queue_1_len--;
+        queue_2_len--;
       }
     }
     //sender('x');
@@ -246,6 +247,8 @@ int sender(char output) {
       queue_len_sum += queue_2_len_store[i];
     }
     printf("%d Is the average queue length for queue_2\n", queue_len_sum / queue_2_pos);
+
+    printf("\n\n%d", rand_queue_count);
 
 
     return 0;
